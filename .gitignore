@@ -90,4 +90,5 @@ ENV/
 
 # Other
 source.py
+data/*
 *.orig

@@ -23,7 +23,10 @@ def push_normalizeddata(data):
                 'data': {'@graph': format_creativework(data)}
             }
         }
-    }, headers={'Authorization': 'Bearer {}'.format(settings.ACCESS_TOKEN), 'Content-Type': 'application/vnd.api+json'})
+    }, headers={
+        'Authorization': 'Bearer {}'.format(settings.ACCESS_TOKEN),
+        'Content-Type': 'application/vnd.api+json'
+    })
     logger.debug(resp.content)
     resp.raise_for_status()
 
@@ -68,14 +71,29 @@ def format_agent(agent):
         'additional_name': agent.middle_names,
     })
 
-    person.attrs['identifiers'] = [GraphNode('agentidentifier', agent=person, uri='mailto:{}'.format(uri)) for uri in agent.emails]
+    person.attrs['identifiers'] = [GraphNode(
+        'agentidentifier',
+        agent=person,
+        uri='mailto:{}'.format(uri)
+    ) for uri in agent.emails]
 
     if agent.is_registered:
-        person.attrs['identifiers'].append(GraphNode('agentidentifier', agent=person, uri=agent.profile_image_url()))
-        person.attrs['identifiers'].append(GraphNode('agentidentifier', agent=person, uri=urlparse.urljoin(settings.DOMAIN, agent.profile_url)))
+        person.attrs['identifiers'].append(GraphNode(
+            'agentidentifier',
+            agent=person,
+            uri=agent.profile_image_url())
+        )
+        person.attrs['identifiers'].append(GraphNode(
+            'agentidentifier',
+            agent=person,
+            uri=urlparse.urljoin(settings.DOMAIN, agent.profile_url))
+        )
 
-    person.attrs['related_agents'] = [GraphNode('isaffiliatedwith', subject=person, related=GraphNode('institution', name=institution))
-                                      for institution in agent.affiliated_institutions.values_list('name', flat=True)]
+    person.attrs['related_agents'] = [GraphNode(
+        'isaffiliatedwith',
+        subject=person,
+        related=GraphNode('institution', name=institution)
+    ) for institution in agent.affiliated_institutions.values_list('name', flat=True)]
 
     return person
 
@@ -91,6 +109,27 @@ def format_contributor(creative_work, agent, bibliographic, index):
 
 
 def format_creativework(preprint):
+    ''' Return graph of creativework
+
+        Attributes (required):
+            data.id (str): if updating or deleting use existing id (XXXXX-XXX-XXX),
+                if creating use '_:X' for temporary id within graph
+            data.type (str): SHARE creative work type
+
+        Attributes (optional):
+            data.title (str):
+            data.description (str):
+            data.identifiers (list):
+            data.creators (list): bibliographic contributors
+            data.contributors (list): non-bibliographic contributors
+            data.date_published (date):
+            data.date_updated (date):
+            data.is_deleted (boolean): defaults to false
+            data.tags (list): free text
+            data.subjects (list): bepress taxonomy
+
+        See 'https://staging-share.osf.io/api/v2/schema' for SHARE types
+    '''
     preprint_graph = GraphNode('preprint', **{
         'title': preprint.node.title,
         'description': preprint.node.description or '',
@@ -107,19 +146,34 @@ def format_creativework(preprint):
 
     to_visit = [
         preprint_graph,
-        GraphNode('workidentifier', creative_work=preprint_graph, uri=urlparse.urljoin(settings.DOMAIN, preprint.url))
+        GraphNode(
+            'workidentifier',
+            creative_work=preprint_graph,
+            uri=urlparse.urljoin(settings.DOMAIN, preprint.url)
+        )
     ]
 
     if preprint.article_doi:
-        to_visit.append(GraphNode('workidentifier', creative_work=preprint_graph, uri='http://dx.doi.org/{}'.format(preprint.article_doi)))
+        to_visit.append(GraphNode(
+            'workidentifier',
+            creative_work=preprint_graph,
+            uri='http://dx.doi.org/{}'.format(preprint.article_doi)
+        ))
 
     preprint_graph.attrs['tags'] = [
-        GraphNode('throughtags', creative_work=preprint_graph, tag=GraphNode('tag', name=tag))
-        for tag in preprint.node.tags.values_list('name', flat=True)
+        GraphNode(
+            'throughtags',
+            creative_work=preprint_graph,
+            tag=GraphNode('tag', name=tag)
+        ) for tag in preprint.node.tags.values_list('name', flat=True)
     ]
 
     preprint_graph.attrs['subjects'] = [
-        GraphNode('throughsubjects', creative_work=preprint_graph, subject=GraphNode('subject', name=subject))
+        GraphNode(
+            'throughsubjects',
+            creative_work=preprint_graph,
+            subject=GraphNode('subject', name=subject)
+        )
         for subject in set(x['text'] for hier in preprint.get_subjects() or [] for x in hier) if subject
     ]
 
