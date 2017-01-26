@@ -1,33 +1,38 @@
 import logging
 import uuid
-import urlparse
-
 import requests
 
 from sharepush import settings
+from sharepush.data import get_data
 
 
 logger = logging.getLogger(__name__)
 
 
-def push_normalizeddata(data):
+def load_data():
+    data = get_data()
+    for work in data['works']:
+        push_normalizeddata(format_creativework(data['works'][work], data))
+
+
+def push_normalizeddata(formatted_work):
 
     if not settings.ACCESS_TOKEN:
-        raise ValueError('No access_token for {}. Unable to push {} to SHARE.'.format(settings.SOURCE_NAME, data))
+        raise ValueError('No access_token for {}. Unable to push {} to SHARE.'.format(settings.SOURCE_NAME, formatted_work))
     resp = requests.post('{}normalizeddata/'.format(settings.SHARE_URL), json={
         'data': {
             'type': 'NormalizedData',
             'attributes': {
                 'tasks': [],
                 'raw': None,
-                'data': {'@graph': format_creativework(data)}
+                'data': {'@graph': formatted_work}
             }
         }
     }, headers={
         'Authorization': 'Bearer {}'.format(settings.ACCESS_TOKEN),
         'Content-Type': 'application/vnd.api+json'
     })
-    logger.debug(resp.content)
+    print(resp.content)
     resp.raise_for_status()
 
 
@@ -64,36 +69,29 @@ class GraphNode(object):
 
 
 def format_agent(agent):
-    person = GraphNode('person', **{
-        'suffix': agent.suffix,
-        'given_name': agent.given_name,
-        'family_name': agent.family_name,
-        'additional_name': agent.middle_names,
+    person = GraphNode(agent['type'], **{
+        'name': agent['name']
     })
 
-    person.attrs['identifiers'] = [GraphNode(
-        'agentidentifier',
-        agent=person,
-        uri='mailto:{}'.format(uri)
-    ) for uri in agent.emails]
+    person.attrs['related_agents'] = []
 
-    if agent.is_registered:
-        person.attrs['identifiers'].append(GraphNode(
-            'agentidentifier',
-            agent=person,
-            uri=agent.profile_image_url())
-        )
-        person.attrs['identifiers'].append(GraphNode(
-            'agentidentifier',
-            agent=person,
-            uri=urlparse.urljoin(settings.DOMAIN, agent.profile_url))
-        )
+    if agent['affiliation']:
+        person.attrs['related_agents'].extend([
+            GraphNode(
+                'isaffiliatedwith',
+                subject=person,
+                related=GraphNode('institution', name=agent['affiliation'])
+            )
+        ])
 
-    person.attrs['related_agents'] = [GraphNode(
-        'isaffiliatedwith',
-        subject=person,
-        related=GraphNode('institution', name=institution)
-    ) for institution in agent.affiliated_institutions.values_list('name', flat=True)]
+    if agent['department']:
+        person.attrs['related_agents'].extend([
+            GraphNode(
+                'isaffiliatedwith',
+                subject=person,
+                related=GraphNode('department', name=agent['department'])
+            )
+        ])
 
     return person
 
@@ -104,93 +102,81 @@ def format_contributor(creative_work, agent, bibliographic, index):
         agent=format_agent(agent),
         order_cited=index if bibliographic else None,
         creative_work=creative_work,
-        cited_as=agent.fullname,
+        cited_as=agent['name'],
     )
 
 
-def format_creativework(preprint):
+def format_creativework(work, data):
     ''' Return graph of creativework
 
         Attributes (required):
-            data.id (str): if updating or deleting use existing id (XXXXX-XXX-XXX),
+            id (str): if updating or deleting use existing id (XXXXX-XXX-XXX),
                 if creating use '_:X' for temporary id within graph
-            data.type (str): SHARE creative work type
+            type (str): SHARE creative work type
 
         Attributes (optional):
-            data.title (str):
-            data.description (str):
-            data.identifiers (list):
-            data.creators (list): bibliographic contributors
-            data.contributors (list): non-bibliographic contributors
-            data.date_published (date):
-            data.date_updated (date):
-            data.is_deleted (boolean): defaults to false
-            data.tags (list): free text
-            data.subjects (list): bepress taxonomy
+            title (str):
+            description (str):
+            identifiers (list):
+            creators (list): bibliographic contributors
+            contributors (list): non-bibliographic contributors
+            date_published (date):
+            date_updated (date):
+            is_deleted (boolean): defaults to false
+            tags (list): free text
+            subjects (list): bepress taxonomy
 
         See 'https://staging-share.osf.io/api/v2/schema' for SHARE types
     '''
-    preprint_graph = GraphNode('preprint', **{
-        'title': preprint.node.title,
-        'description': preprint.node.description or '',
-        'is_deleted': (
-            not preprint.is_published or
-            not preprint.node.is_public or
-            preprint.node.is_preprint_orphan or
-            preprint.node.tags.filter(name='qatest').exists() or
-            preprint.node.is_deleted
-        ),
-        'date_updated': preprint.date_modified.isoformat(),
-        'date_published': preprint.date_published.isoformat() if preprint.date_published else None
+    # import pdb; pdb.set_trace()
+    work_type = work['type']
+    work_graph = GraphNode(work_type, **{
+        'title': work['title'],
+        'description': work['description'],
+        'is_deleted': False
+        # 'date_updated': None,
+        # 'date_published': None
     })
 
-    to_visit = [
-        preprint_graph,
+    graph = [
+        work_graph,
         GraphNode(
             'workidentifier',
-            creative_work=preprint_graph,
-            uri=urlparse.urljoin(settings.DOMAIN, preprint.url)
+            creative_work=work_graph,
+            uri=work['url']
         )
     ]
 
-    if preprint.article_doi:
-        to_visit.append(GraphNode(
-            'workidentifier',
-            creative_work=preprint_graph,
-            uri='http://dx.doi.org/{}'.format(preprint.article_doi)
-        ))
-
-    preprint_graph.attrs['tags'] = [
+    work_graph.attrs['tags'] = [
         GraphNode(
             'throughtags',
-            creative_work=preprint_graph,
-            tag=GraphNode('tag', name=tag)
-        ) for tag in preprint.node.tags.values_list('name', flat=True)
+            creative_work=work_graph,
+            tag=GraphNode('tag', name=tag.strip())
+        ) for tag in work['tags'].split('|')
     ]
 
-    preprint_graph.attrs['subjects'] = [
-        GraphNode(
-            'throughsubjects',
-            creative_work=preprint_graph,
-            subject=GraphNode('subject', name=subject)
+    if work['contributors']:
+        graph.extend(
+            format_contributor(work_graph, data['contributors'][user_id.strip()], True, i) for i, user_id in enumerate(work['contributors'].split('|'))
         )
-        for subject in set(x['text'] for hier in preprint.get_subjects() or [] for x in hier) if subject
-    ]
 
-    to_visit.extend(format_contributor(preprint_graph, user, preprint.node.get_visible(user), i) for i, user in enumerate(preprint.node.contributors))
-    to_visit.extend(GraphNode('AgentWorkRelation', creative_work=preprint_graph, agent=GraphNode('institution', name=institution))
-                    for institution in preprint.node.affiliated_institutions.values_list('name', flat=True))
+    # related_works
+    # graph.extend(GraphNode(
+    #     'AgentWorkRelation',
+    #     creative_work=work_graph,
+    #     agent=GraphNode('institution', name=institution)
+    # ) for institution in preprint.node.affiliated_institutions.values_list('name', flat=True))
 
     visited = set()
-    to_visit.extend(preprint_graph.get_related())
+    graph.extend(work_graph.get_related())
 
     while True:
-        if not to_visit:
+        if not graph:
             break
-        n = to_visit.pop(0)
+        n = graph.pop(0)
         if n in visited:
             continue
         visited.add(n)
-        to_visit.extend(list(n.get_related()))
+        graph.extend(list(n.get_related()))
 
     return [node.serialize() for node in visited]

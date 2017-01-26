@@ -14,7 +14,8 @@ def get_data():
             reader = csv.reader(f)
             headers = next(reader)
             rows = list(reader)
-            file_data = {row.pop(0): row for row in rows}
-            file_data['headers'] = headers
-            data[str(os.path.splitext(filename)[0])] = file_data
+
+            # map the headers onto each row
+            row_map = {row.pop(0): dict(zip(headers, row)) for row in rows}
+            data[str(os.path.splitext(filename)[0])] = row_map
     return data
