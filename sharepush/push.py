@@ -1,6 +1,7 @@
 import logging
 import uuid
 import requests
+import itertools
 
 from sharepush import settings
 from sharepush.data import get_data
@@ -77,6 +78,21 @@ class GraphNode(object):
         return dict(self.ref, **ser)
 
 
+def format_department(department, department_id):
+    department_graph = GraphNode(
+        'department',
+        name=department.strip()
+    )
+    department_graph.attrs['identifiers'] = [
+        GraphNode(
+            'agentidentifier',
+            agent=department_graph,
+            uri=department_id.strip()
+        )
+    ]
+    return department_graph
+
+
 def format_agent(agent):
     person = GraphNode(agent['type'], **{
         'name': agent['name']
@@ -107,8 +123,9 @@ def format_agent(agent):
             GraphNode(
                 'isaffiliatedwith',
                 subject=person,
-                related=GraphNode('department', name=department.strip())
-            ) for department in agent['department'].split("|")
+                related=format_department(department, department_id)
+            ) for department, department_id in itertools.product(agent['department'].split("|"), agent['department_id'].split("|"))
+            # for department in agent['department'].split("|")
         ])
 
     return person
