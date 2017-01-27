@@ -9,6 +9,13 @@ from sharepush.data import get_data
 logger = logging.getLogger(__name__)
 
 
+def try_key(obj, key, default=''):
+    try:
+        return obj[key]
+    except KeyError:
+        return default
+
+
 def load_data():
     data = get_data()
     for work in data['works']:
@@ -32,7 +39,9 @@ def push_normalizeddata(formatted_work):
         'Authorization': 'Bearer {}'.format(settings.ACCESS_TOKEN),
         'Content-Type': 'application/vnd.api+json'
     })
-    print(resp.content)
+    if resp.status_code == 400:
+        print(formatted_work)
+        print(resp.content)
     resp.raise_for_status()
 
 
@@ -73,24 +82,33 @@ def format_agent(agent):
         'name': agent['name']
     })
 
+    if try_key(agent, 'identifier', default=[]):
+        person.attrs['identifiers'] = [
+            GraphNode(
+                'agentidentifier',
+                agent=person,
+                uri=agent['identifier']
+            )
+        ]
+
     person.attrs['related_agents'] = []
 
-    if agent['affiliation']:
+    if try_key(agent, 'affiliation', default=[]):
         person.attrs['related_agents'].extend([
             GraphNode(
                 'isaffiliatedwith',
                 subject=person,
-                related=GraphNode('institution', name=agent['affiliation'])
-            )
+                related=GraphNode('institution', name=affiliation.strip())
+            ) for affiliation in agent['affiliation'].split("|")
         ])
 
-    if agent['department']:
+    if try_key(agent, 'department', default=[]):
         person.attrs['related_agents'].extend([
             GraphNode(
                 'isaffiliatedwith',
                 subject=person,
-                related=GraphNode('department', name=agent['department'])
-            )
+                related=GraphNode('department', name=department.strip())
+            ) for department in agent['department'].split("|")
         ])
 
     return person
@@ -104,6 +122,42 @@ def format_contributor(creative_work, agent, bibliographic, index):
         creative_work=creative_work,
         cited_as=agent['name'],
     )
+
+
+def format_award(award):
+    """
+        name
+        description
+        award_amount
+        date
+        uri
+    """
+    return GraphNode(
+        'award',
+        name=award['title'],
+        date=award['date'],
+        uri=award['identifier'] if award['identifier'] else None
+    )
+
+
+def format_funder(creative_work, agent, awards_data):
+
+    funder_graph = GraphNode(
+        'funder',
+        agent=format_agent(agent),
+        creative_work=creative_work,
+    )
+
+    if agent['awards']:
+        funder_graph.attrs['award'] = [
+            GraphNode(
+                'throughawards',
+                funder=funder_graph,
+                award=format_award(awards_data[award.strip()])
+            ) for award in agent['awards'].split("|")
+        ]
+
+    return funder_graph
 
 
 def format_creativework(work, data):
@@ -128,9 +182,9 @@ def format_creativework(work, data):
 
         See 'https://staging-share.osf.io/api/v2/schema' for SHARE types
     '''
-    # import pdb; pdb.set_trace()
-    work_type = work['type']
-    work_graph = GraphNode(work_type, **{
+
+    # work
+    work_graph = GraphNode(work['type'], **{
         'title': work['title'],
         'description': work['description'],
         'is_deleted': False
@@ -138,6 +192,7 @@ def format_creativework(work, data):
         # 'date_published': None
     })
 
+    # work identifier (i.e. DOI)
     graph = [
         work_graph,
         GraphNode(
@@ -147,6 +202,7 @@ def format_creativework(work, data):
         )
     ]
 
+    # tags - free text
     work_graph.attrs['tags'] = [
         GraphNode(
             'throughtags',
@@ -155,17 +211,38 @@ def format_creativework(work, data):
         ) for tag in work['tags'].split('|')
     ]
 
+    # creators/contributors
     if work['contributors']:
         graph.extend(
-            format_contributor(work_graph, data['contributors'][user_id.strip()], True, i) for i, user_id in enumerate(work['contributors'].split('|'))
+            format_contributor(
+                work_graph,
+                data['contributors'][user_id.strip()],
+                True,
+                i
+            ) for i, user_id in enumerate(work['contributors'].split('|'))
+        )
+
+    # funders
+    if work['funders']:
+        graph.extend(
+            format_funder(
+                work_graph,
+                data['funders'][funder_id.strip()],
+                data['awards']
+            ) for funder_id in work['funders'].split('|')
         )
 
     # related_works
-    # graph.extend(GraphNode(
-    #     'AgentWorkRelation',
-    #     creative_work=work_graph,
-    #     agent=GraphNode('institution', name=institution)
-    # ) for institution in preprint.node.affiliated_institutions.values_list('name', flat=True))
+    if work['related_works']:
+        work_graph.attrs['related_works'] = [GraphNode(
+            'WorkRelation',
+            subject=work_graph,
+            related=GraphNode('creativework', identifiers=[GraphNode(
+                'workidentifier',
+                creative_work=work_graph,
+                uri=identifier.strip()
+            )])
+        ) for identifier in work['related_works'].split('|')]
 
     visited = set()
     graph.extend(work_graph.get_related())
