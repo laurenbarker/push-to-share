@@ -1,7 +1,3 @@
-# Consolidates settings from base.py and source.py.
-
-from .base import *  # noqa
-
 try:
     from .source import *  # noqa
 except ImportError as error:

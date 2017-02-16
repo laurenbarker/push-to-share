@@ -1,0 +1,7 @@
+funder_id,type,name,awards
+F001,Organization,AT&T,
+F002,Organization,Australian Research Council Discovery Projects,A001
+F003,Organization,British Petroleum (BP),
+F004,Institution,Example University,
+F005,Institution,National Institute of Health,A003
+F006,Organization,National Science Foundation,A002|A006

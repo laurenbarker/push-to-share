@@ -1,0 +1,7 @@
+contributor_id,type,name,identifier,affiliation,department
+C0001,person,Jane Doe,mailto:jane@example.edu,Example University,Sociology
+C0002,person,John Doe,mailto:john@example.edu,Example University,Biology
+C0003,person,Bob T. Builder,mailto:bob@example.edu,Example University,
+C0004,person,A. Smith,,Example University,Computer Science
+C0005,institution,Example University,,,
+C0006,organization,Not Academic,,,

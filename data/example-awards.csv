@@ -1,0 +1,7 @@
+award_id,identifier,title,date
+A001,http://purl.org/au-research/grants/arc/DPXXXXXXXXX,Example Grant/Award Title 1,2001-05-14
+A002,https://www.nsf.gov/awardsearch/showAward?AWD_ID=00XXXXX,Example Grant/Award Title 2,2001-05-14
+A003,https://projectreporter.nih.gov/project_info_description.cfm?aid=XXXXXXX,Example Grant/Award Title 3,2003-12-31
+A004,,Example Grant/Award Title 4,2003-08-12
+A005,,Example Grant/Award Title 5,2004-09-08
+A006,https://www.nsf.gov/awardsearch/showAward?AWD_ID=00XXXXX,Example Grant/Award Title 6,2005-09-07

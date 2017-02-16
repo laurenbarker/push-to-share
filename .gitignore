@@ -91,4 +91,5 @@ ENV/
 # Other
 source.py
 data/*
+!data/example-*
 *.orig
