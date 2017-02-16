@@ -40,6 +40,7 @@ def push_normalizeddata(formatted_work):
         'Authorization': 'Bearer {}'.format(settings.ACCESS_TOKEN),
         'Content-Type': 'application/vnd.api+json'
     })
+
     if resp.status_code == 400:
         print(formatted_work)
         print(resp.content)
@@ -125,7 +126,6 @@ def format_agent(agent):
                 subject=person,
                 related=format_department(department, department_id)
             ) for department, department_id in itertools.product(agent['department'].split("|"), agent['department_id'].split("|"))
-            # for department in agent['department'].split("|")
         ])
 
     return person
@@ -175,6 +175,38 @@ def format_funder(creative_work, agent, awards_data):
         ]
 
     return funder_graph
+
+
+def format_publisher():
+    publisher_graph = GraphNode(
+        'institution',
+        name='UC San Diego'
+    )
+    publisher_graph.attrs['identifiers'] = [
+        GraphNode(
+            'agentidentifier',
+            agent=publisher_graph,
+            uri='https://ucsd.edu/'
+        )
+    ]
+    return publisher_graph
+
+
+def format_related_work(subject, identifier):
+    related_work = GraphNode('creativework')
+    related_work.attrs['identifiers'] = [
+        GraphNode(
+            'workidentifier',
+            creative_work=related_work,
+            uri=identifier
+        )
+    ]
+
+    return GraphNode(
+        'WorkRelation',
+        subject=subject,
+        related=related_work
+    )
 
 
 def format_creativework(work, data):
@@ -251,15 +283,21 @@ def format_creativework(work, data):
 
     # related_works
     if work['related_works']:
-        work_graph.attrs['related_works'] = [GraphNode(
-            'WorkRelation',
-            subject=work_graph,
-            related=GraphNode('creativework', identifiers=[GraphNode(
-                'workidentifier',
-                creative_work=work_graph,
-                uri=identifier.strip()
-            )])
-        ) for identifier in work['related_works'].split('|')]
+        graph.extend(
+            format_related_work(
+                work_graph,
+                identifier.strip()
+            ) for identifier in work['related_works'].split('|')
+        )
+
+    # hardcoded publisher
+    # graph.extend([
+    #     GraphNode(
+    #         'publisher',
+    #         agent=format_publisher(),
+    #         creative_work=work_graph
+    #     )
+    # ])
 
     visited = set()
     graph.extend(work_graph.get_related())
