@@ -14,8 +14,7 @@ Once in the `share` virtual environment, install the necessary requirements.
     pip install -r requirements.txt
 
 Copy `cp sharepush/settings/source-dist.py` to `sharepush/settings/source.py`. 
-NOTE: This is your local settings file, which overrides the settings in `sharepush/settings/base.py`. 
-It will not be added to source control, so change it as you wish.
+NOTE: This is your local settings file. It will not be added to source control, so change it as you wish.
 
     $ cp sharepush/settings/source-dist.py sharepush/settings/source.py
 
