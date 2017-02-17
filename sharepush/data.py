@@ -10,7 +10,7 @@ def get_data():
     """
     data = {}
     for filename in os.listdir('data'):
-        if not filename.startswith('.'):
+        if not filename.startswith('.') and not filename.startswith('example'):
             with open(os.path.join(os.path.dirname((os.path.dirname(__file__))), 'data/') + filename, 'r') as f:
                 reader = csv.reader(f)
                 headers = next(reader)
