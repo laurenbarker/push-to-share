@@ -309,14 +309,6 @@ def format_creativework(work, data):
             ) for identifier in work['related_works'].split('|')
         )
 
-    # same_as (SHARE id XXX-XXX-XXXX)
-    # same_as: {'@id': 'FFF-FFF-FFFF', '@type': 'whatever'}
-    if work['same_as']:
-        work_graph.attrs['same_as'] = GraphNode(
-            'creativework',
-            share_id=work['same_as'].strip()
-        )
-
     # hardcoded publisher
     # if work['publisher']:
     #     graph.extend([

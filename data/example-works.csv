@@ -1,7 +1,7 @@
-work_id,type,identifiers,date_updated,date_published,is_deleted,title,description,contributors,funders,tags,source,same_as,related_works
-W001,Publication,https://doi.org/XX.XXXX/X.XXXXXX,5-4-16,,False,Example Title 1,Example description…,C0001,F002|F006,example tag|example tag 2,Example University,,https://doi.org/XX.XXXX/X.XXXXXX
-W002,Dataset,https://doi.org/XX.XXXX/X.XXXXXX,,May 2017,,Example Title 2,Example description…,C0001|C0002|C0003|C0004,F003|F004|F005,example tag|example tag 3,Example University,,https://doi.org/XX.XXXX/X.XXXXXX
-W003,Preprint,https://doi.org/XX.XXXX/X.XXXXXX,1-3-17,,,Example Title 3,Example description…,C0001|C0002|C0005,,example tag|example tag 4,Example University,,
-W004,Repository,https://doi.org/XX.XXXX/X.XXXXXX,,June 2015,,Example Title 4,Example description…,C0006,F003,example tag|example tag 5,Example University,,
-W005,Article,https://doi.org/XX.XXXX/X.XXXXXX,,,,Example Title 5,Example description…,C0002|C0003|C0004,,example tag|example tag 6,Example University,,
-W006,Thesis,https://unique.uri.com/XXXXX,,Nov 13,,Example Title 6,Example description…,C0005,F001,example tag|example tag 7,Example University,,https://doi.org/XX.XXXX/X.XXXXXX| https://doi.org/XX.XXXX/X.XXXXXX
+work_id,type,identifiers,date_updated,date_published,is_deleted,title,description,contributors,funders,tags,source,related_works
+W001,Publication,https://doi.org/XX.XXXX/X.XXXXXX,5-4-16,,False,Example Title 1,Example description…,C0001,F002|F006,example tag|example tag 2,Example University,https://doi.org/XX.XXXX/X.XXXXXX
+W002,Dataset,https://doi.org/XX.XXXX/X.XXXXXX,,May 2017,,Example Title 2,Example description…,C0001|C0002|C0003|C0004,F003|F004|F005,example tag|example tag 3,Example University,https://doi.org/XX.XXXX/X.XXXXXX
+W003,Preprint,https://doi.org/XX.XXXX/X.XXXXXX,1-3-17,,,Example Title 3,Example description…,C0001|C0002|C0005,,example tag|example tag 4,Example University,
+W004,Repository,https://doi.org/XX.XXXX/X.XXXXXX,,June 2015,,Example Title 4,Example description…,C0006,F003,example tag|example tag 5,Example University,
+W005,Article,https://doi.org/XX.XXXX/X.XXXXXX,,,,Example Title 5,Example description…,C0002|C0003|C0004,,example tag|example tag 6,Example University,
+W006,Thesis,https://unique.uri.com/XXXXX,,Nov 13,,Example Title 6,Example description…,C0005,F001,example tag|example tag 7,Example University,https://doi.org/XX.XXXX/X.XXXXXX| https://doi.org/XX.XXXX/X.XXXXXX
