@@ -5,13 +5,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_data():
+def get_data(dir_name):
     """ Return dictionaries for each file in the data dir
     """
     data = {}
-    for filename in os.listdir('data'):
+    for filename in os.listdir(dir_name):
         if not filename.startswith('.') and not filename.startswith('example'):
-            with open(os.path.join(os.path.dirname((os.path.dirname(__file__))), 'data/') + filename, 'r') as f:
+            with open(os.path.join(os.path.dirname((os.path.dirname(__file__))), dir_name + '/') + filename, 'r') as f:
                 reader = csv.reader(f)
                 headers = next(reader)
                 rows = list(reader)
