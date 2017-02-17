@@ -2,6 +2,7 @@ import logging
 import uuid
 import requests
 import itertools
+import pendulum
 
 from sharepush import settings
 from sharepush.data import get_data
@@ -17,9 +18,17 @@ def try_key(obj, key, default=''):
         return default
 
 
-def load_data():
-    data = get_data()
+def load_data(dry=False, dir_name='data'):
+    data = get_data(dir_name)
+    try:
+        data['works']
+    except KeyError:
+        raise KeyError('No data found. Add some csv files to the data directory!')
+
     for work in data['works']:
+        if dry:
+            print(format_creativework(data['works'][work], data))
+            continue
         push_normalizeddata(format_creativework(data['works'][work], data))
 
 
@@ -53,8 +62,8 @@ class GraphNode(object):
     def ref(self):
         return {'@id': self.id, '@type': self.type}
 
-    def __init__(self, type_, **attrs):
-        self.id = '_:{}'.format(uuid.uuid4())
+    def __init__(self, type_, share_id=None, **attrs):
+        self.id = share_id if share_id else '_:{}'.format(uuid.uuid4())
         self.type = type_.lower()
         self.attrs = attrs
 
@@ -237,28 +246,38 @@ def format_creativework(work, data):
         'title': work['title'],
         'description': work['description'],
         'is_deleted': False
-        # 'date_updated': None,
-        # 'date_published': None
     })
 
+    if work['date_updated']:
+        work_graph.attrs['date_updated'] = pendulum.parse(work['date_updated']).date().isoformat()
+
+    if work['date_published']:
+        work_graph.attrs['date_published'] = pendulum.parse(work['date_published']).date().isoformat()
+
+    if work['is_deleted']:
+        work_graph.attrs['is_deleted'] = True if work['is_deleted'].lower() == 'true' else False
+
+    graph = [work_graph]
+
     # work identifier (i.e. DOI)
-    graph = [
-        work_graph,
-        GraphNode(
-            'workidentifier',
-            creative_work=work_graph,
-            uri=work['url']
+    if work['identifiers']:
+        graph.extend(
+            GraphNode(
+                'workidentifier',
+                creative_work=work_graph,
+                uri=identifier.strip()
+            ) for identifier in work['identifiers'].split('|')
         )
-    ]
 
     # tags - free text
-    work_graph.attrs['tags'] = [
-        GraphNode(
-            'throughtags',
-            creative_work=work_graph,
-            tag=GraphNode('tag', name=tag.strip())
-        ) for tag in work['tags'].split('|')
-    ]
+    if work['tags']:
+        work_graph.attrs['tags'] = [
+            GraphNode(
+                'throughtags',
+                creative_work=work_graph,
+                tag=GraphNode('tag', name=tag.strip())
+            ) for tag in work['tags'].split('|')
+        ]
 
     # creators/contributors
     if work['contributors']:
@@ -290,14 +309,23 @@ def format_creativework(work, data):
             ) for identifier in work['related_works'].split('|')
         )
 
+    # same_as (SHARE id XXX-XXX-XXXX)
+    # same_as: {'@id': 'FFF-FFF-FFFF', '@type': 'whatever'}
+    if work['same_as']:
+        work_graph.attrs['same_as'] = GraphNode(
+            'creativework',
+            share_id=work['same_as'].strip()
+        )
+
     # hardcoded publisher
-    # graph.extend([
-    #     GraphNode(
-    #         'publisher',
-    #         agent=format_publisher(),
-    #         creative_work=work_graph
-    #     )
-    # ])
+    # if work['publisher']:
+    #     graph.extend([
+    #         GraphNode(
+    #             'publisher',
+    #             agent=format_publisher(),
+    #             creative_work=work_graph
+    #         )
+    #     ])
 
     visited = set()
     graph.extend(work_graph.get_related())
