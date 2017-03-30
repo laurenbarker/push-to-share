@@ -108,13 +108,14 @@ def format_agent(agent):
         'name': agent['name']
     })
 
-    if try_key(agent, 'identifier', default=[]):
+    if try_key(agent, 'identifiers', default=[]):
         person.attrs['identifiers'] = [
             GraphNode(
                 'agentidentifier',
                 agent=person,
-                uri=agent['identifier']
+                uri=identifier.strip()
             )
+            for identifier in agent['identifiers'].split('|')
         ]
 
     person.attrs['related_agents'] = []
